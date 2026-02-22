@@ -6,8 +6,7 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.model_selection import train_test_split
-import pickle
-import os
+
 
 class FootballDataset(Dataset):
     def __init__(self, X, y):
@@ -23,7 +22,7 @@ class FootballDataset(Dataset):
 class FootballNN(nn.Module):
     def __init__(self, input_size):
         super(FootballNN, self).__init__()
-        # Architecture plus simple pour éviter le surapprentissage
+     
         self.network = nn.Sequential(
             nn.Linear(input_size, 64),
             nn.ReLU(),
