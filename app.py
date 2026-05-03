@@ -455,9 +455,10 @@ def compare_tennis_players(player1, player2):
 # ==================== INTERFACE GRADIO ====================
 
 # Créer l'interface Gradio
-with gr.Blocks(title="⚽🎾 Prédicteur Sports") as app:
+with gr.Blocks(title="⚽🎾 Prédicteur Sports", css="") as app:
+    
     gr.Markdown("""
-    # ⚽🎾 Prédicteur de Matchs - Football & Tennis
+    # ⚽🎾 Prédicteur de Matchs avec réseau neuronal
     ## 🧠 Intelligence Artificielle avec PyTorch
     
     Prédisez les résultats des matchs de **Serie A** et de **Tennis** basés sur les données historiques
