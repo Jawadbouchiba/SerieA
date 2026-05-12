@@ -2,6 +2,7 @@ import gradio as gr
 import pandas as pd
 from model import FootballPredictor
 from model_tennis import TennisPredictor
+from betting_strategy import BettingStrategy
 import os
 import matplotlib.pyplot as plt
 import numpy as np
@@ -28,6 +29,11 @@ print("⏳ Chargement des données tennis (cela peut prendre 1-2 minutes)...")
 tennis_predictor = TennisPredictor('datatenis20002025.csv')
 tennis_predictor.load_and_prepare_data()
 print(f"✅ Tennis prêt! {len(tennis_predictor.get_all_players())} joueurs chargés")
+
+# Initialiser la stratégie de paris
+print("\n💰 Initialisation du module de paris...")
+betting_strategy = BettingStrategy(predictor, initial_bankroll=1000)
+print("✅ Module de paris prêt!")
 
 # Récupérer toutes les équipes
 all_teams_raw = predictor.get_all_teams()
@@ -60,19 +66,15 @@ def predict_match(team1, team2, venue):
     if team1 == team2:
         return "⚠️ Veuillez sélectionner deux équipes différentes!", None
     
-    # Convertir les noms affichés en noms réels
     team1_real = team_real_names.get(team1, team1)
     team2_real = team_real_names.get(team2, team2)
     
-    # Faire la prédiction
     result = predictor.predict(team1_real, team2_real, venue)
     
-    # Créer le texte de résultat
     win_prob = result['win'] * 100
     draw_prob = result['draw'] * 100
     loss_prob = result['loss'] * 100
     
-    # Déterminer le résultat le plus probable
     max_prob = max(win_prob, draw_prob, loss_prob)
     if max_prob == win_prob:
         prediction = f"🏆 Victoire probable de {team1}"
@@ -95,7 +97,6 @@ def predict_match(team1, team2, venue):
 **Lieu:** {"🏠 Domicile (" + team1 + ")" if venue == "Home" else "✈️ Extérieur (chez " + team2 + ")"}
     """
     
-    # Créer un graphique
     fig, ax = plt.subplots(figsize=(10, 6))
     
     categories = [f'Victoire\n{team1}', 'Match\nNul', f'Victoire\n{team2}']
@@ -104,7 +105,6 @@ def predict_match(team1, team2, venue):
     
     bars = ax.bar(categories, probabilities, color=colors, alpha=0.8, edgecolor='black', linewidth=2)
     
-    # Ajouter les valeurs sur les barres
     for bar, prob in zip(bars, probabilities):
         height = bar.get_height()
         ax.text(bar.get_x() + bar.get_width()/2., height,
@@ -123,7 +123,6 @@ def predict_match(team1, team2, venue):
 
 def get_team_stats(team):
     """Affiche les statistiques d'une équipe"""
-    # Convertir le nom affiché en nom réel
     team_real = team_real_names.get(team, team)
     
     if team_real not in predictor.team_stats:
@@ -153,15 +152,13 @@ def get_team_stats(team):
 - **Possession moyenne:** {stats['avg_poss']:.1f}%
     """
     
-    # Créer un graphique radar
     fig, ax = plt.subplots(figsize=(8, 8), subplot_kw=dict(projection='polar'))
     
     categories = ['Attaque', 'Défense', 'Possession', 'Victoires', 'Forme']
     
-    # Normaliser les valeurs entre 0 et 1
     values = [
-        min(stats['avg_gf'] / 3, 1),  # Normaliser sur 3 buts
-        1 - min(stats['avg_ga'] / 3, 1),  # Inverse pour la défense
+        min(stats['avg_gf'] / 3, 1),
+        1 - min(stats['avg_ga'] / 3, 1),
         stats['avg_poss'] / 100,
         stats['win_rate'],
         stats['recent_form']
@@ -188,7 +185,6 @@ def compare_teams(team1, team2):
     if team1 == team2:
         return "⚠️ Veuillez sélectionner deux équipes différentes!", None
     
-    # Convertir les noms affichés en noms réels
     team1_real = team_real_names.get(team1, team1)
     team2_real = team_real_names.get(team2, team2)
     
@@ -213,7 +209,6 @@ def compare_teams(team1, team2):
 | **Tirs (moy.)** | {stats1['avg_sh']:.1f} | {stats2['avg_sh']:.1f} |
     """
     
-    # Créer un graphique de comparaison
     fig, ax = plt.subplots(figsize=(12, 6))
     
     categories = ['Victoires', 'Forme', 'Attaque', 'Défense', 'Possession']
@@ -258,14 +253,11 @@ def predict_tennis_match(player1, player2, surface):
     if player1 == player2:
         return "⚠️ Veuillez sélectionner deux joueurs différents!", None
     
-    # Faire la prédiction
     result = tennis_predictor.predict(player1, player2, surface)
     
-    # Créer le texte de résultat
     prob1 = result['player1_win'] * 100
     prob2 = result['player2_win'] * 100
     
-    # Déterminer le favori
     if prob1 > prob2:
         prediction = f"🏆 Victoire probable de {player1}"
     else:
@@ -284,7 +276,6 @@ def predict_tennis_match(player1, player2, surface):
 **Surface:** {surface}
     """
     
-    # Créer un graphique
     fig, ax = plt.subplots(figsize=(10, 6))
     
     categories = [f'{player1}', f'{player2}']
@@ -293,7 +284,6 @@ def predict_tennis_match(player1, player2, surface):
     
     bars = ax.bar(categories, probabilities, color=colors, alpha=0.8, edgecolor='black', linewidth=2)
     
-    # Ajouter les valeurs sur les barres
     for bar, prob in zip(bars, probabilities):
         height = bar.get_height()
         ax.text(bar.get_x() + bar.get_width()/2., height,
@@ -333,10 +323,8 @@ def get_tennis_player_stats(player):
     for surface, surface_stats in info['surfaces'].items():
         stats_text += f"- **{surface}:** {surface_stats['win_rate']*100:.1f}% ({surface_stats['total_matches']} matchs)\n"
     
-    # Créer un graphique des performances par surface
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
     
-    # Graphique 1: Performance globale
     categories = ['Taux de\nvictoire', 'Forme\nrécente']
     values = [info['win_rate'] * 100, info['recent_form'] * 100]
     colors = ['#4CAF50', '#2196F3']
@@ -354,7 +342,6 @@ def get_tennis_player_stats(player):
     ax1.grid(axis='y', alpha=0.3, linestyle='--')
     ax1.set_axisbelow(True)
     
-    # Graphique 2: Performance par surface
     surfaces = []
     surface_values = []
     for surface, surface_stats in info['surfaces'].items():
@@ -410,7 +397,6 @@ def compare_tennis_players(player1, player2):
         stats2 = info2['surfaces'].get(surface, {'win_rate': 0, 'total_matches': 0})
         comparison_text += f"- **{surface}:** {stats1['win_rate']*100:.1f}% vs {stats2['win_rate']*100:.1f}%\n"
     
-    # Créer un graphique de comparaison
     fig, ax = plt.subplots(figsize=(12, 6))
     
     categories = ['Victoires', 'Forme', 'Hard', 'Clay', 'Grass', 'Carpet']
@@ -452,213 +438,420 @@ def compare_tennis_players(player1, player2):
     
     return comparison_text, fig
 
+# ==================== FONCTIONS PARIS ====================
+
+def analyze_bet(team1, team2, venue, odds_win, odds_draw, odds_loss, bankroll, min_confidence, min_edge):
+    """Analyse un match et retourne une recommandation de pari"""
+    if team1 == team2:
+        return "⚠️ Veuillez sélectionner deux équipes différentes!", None
+
+    team1_real = team_real_names.get(team1, team1)
+    team2_real = team_real_names.get(team2, team2)
+
+    bookmaker_odds = {
+        'win': odds_win,
+        'draw': odds_draw,
+        'loss': odds_loss
+    }
+
+    # Mettre à jour le bankroll de la stratégie
+    betting_strategy.current_bankroll = bankroll
+
+    recommendation = betting_strategy.evaluate_match(
+        team1_real, team2_real, venue, bookmaker_odds,
+        min_confidence=min_confidence / 100,
+        min_edge=min_edge / 100,
+        max_stake=0.05
+    )
+
+    prediction = recommendation['prediction']
+    win_prob = prediction['win'] * 100
+    draw_prob = prediction['draw'] * 100
+    loss_prob = prediction['loss'] * 100
+    confidence = prediction['confidence'] * 100
+
+    if recommendation['should_bet']:
+        details = recommendation['bet_details']
+        outcome_fr = {'win': f'Victoire {team1}', 'draw': 'Match Nul', 'loss': f'Victoire {team2}'}
+        outcome_label = outcome_fr.get(details['outcome'], details['outcome'])
+
+        result_text = f"""
+# ✅ PARI RECOMMANDÉ
+
+## 🎯 Résultat conseillé : **{outcome_label}**
+
+---
+
+## 📊 Probabilités du modèle:
+- ⚽ Victoire {team1}: **{win_prob:.1f}%**
+- 🤝 Match nul: **{draw_prob:.1f}%**
+- ⚽ Victoire {team2}: **{loss_prob:.1f}%**
+- 🧠 Confiance: **{confidence:.1f}%**
+
+---
+
+## 💰 Détails du pari:
+| Paramètre | Valeur |
+|-----------|--------|
+| **Issue à jouer** | {outcome_label} |
+| **Cote** | {details['odds']:.2f} |
+| **Mise recommandée** | ${details['stake_amount']:.2f} ({details['stake_pct']*100:.1f}% du bankroll) |
+| **Valeur Espérée (EV)** | {details['expected_value']*100:+.2f}% |
+| **Avantage (Edge)** | {details['edge']*100:+.2f}% |
+
+---
+
+## 💡 Raison: {recommendation['reason']}
+        """
+    else:
+        result_text = f"""
+# ❌ PARI NON RECOMMANDÉ
+
+## 📊 Probabilités du modèle:
+- ⚽ Victoire {team1}: **{win_prob:.1f}%**
+- 🤝 Match nul: **{draw_prob:.1f}%**
+- ⚽ Victoire {team2}: **{loss_prob:.1f}%**
+- 🧠 Confiance: **{confidence:.1f}%**
+
+---
+
+## ❌ Raison: {recommendation['reason']}
+
+> Les conditions minimales ne sont pas remplies pour ce match. Passez votre chemin!
+        """
+
+    # Graphique
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+
+    # Graphique 1 : Probabilités
+    categories = [f'Victoire\n{team1}', 'Match\nNul', f'Victoire\n{team2}']
+    probabilities = [win_prob, draw_prob, loss_prob]
+    colors = ['#4CAF50', '#FFC107', '#FF5722']
+
+    bars = ax1.bar(categories, probabilities, color=colors, alpha=0.8, edgecolor='black', linewidth=2)
+    for bar, prob in zip(bars, probabilities):
+        height = bar.get_height()
+        ax1.text(bar.get_x() + bar.get_width()/2., height,
+                f'{prob:.1f}%', ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+    ax1.set_ylabel('Probabilité (%)', fontsize=12, fontweight='bold')
+    ax1.set_title(f'Probabilités: {team1} vs {team2}', fontsize=13, fontweight='bold')
+    ax1.set_ylim(0, 100)
+    ax1.grid(axis='y', alpha=0.3, linestyle='--')
+    ax1.set_axisbelow(True)
+
+    # Graphique 2 : Analyse de valeur
+    if recommendation['should_bet'] and recommendation.get('betting_analysis'):
+        analysis = recommendation['betting_analysis']['outcomes']
+        outcomes = list(analysis.keys())
+        evs = [analysis[o]['expected_value'] * 100 for o in outcomes]
+        bar_colors = ['#4CAF50' if ev > 0 else '#FF5722' for ev in evs]
+        labels = [f'Victoire\n{team1}' if o == 'win' else ('Match\nNul' if o == 'draw' else f'Victoire\n{team2}') for o in outcomes]
+
+        bars2 = ax2.bar(labels, evs, color=bar_colors, alpha=0.8, edgecolor='black', linewidth=2)
+        for bar, ev in zip(bars2, evs):
+            height = bar.get_height()
+            ax2.text(bar.get_x() + bar.get_width()/2.,
+                    height if height >= 0 else height - 3,
+                    f'{ev:+.1f}%', ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+        ax2.axhline(y=0, color='black', linewidth=1.5, linestyle='-')
+        ax2.set_ylabel('Valeur Espérée (%)', fontsize=12, fontweight='bold')
+        ax2.set_title('Analyse de Valeur (EV)', fontsize=13, fontweight='bold')
+        ax2.grid(axis='y', alpha=0.3, linestyle='--')
+        ax2.set_axisbelow(True)
+    else:
+        ax2.text(0.5, 0.5, '❌ Pas de valeur\ndétectée', ha='center', va='center',
+                fontsize=16, transform=ax2.transAxes, color='#FF5722', fontweight='bold')
+        ax2.set_title('Analyse de Valeur (EV)', fontsize=13, fontweight='bold')
+
+    plt.tight_layout()
+
+    return result_text, fig
+
+
+def get_betting_performance():
+    """Affiche le rapport de performance des paris"""
+    stats = betting_strategy.get_performance_stats()
+
+    if not stats:
+        return "❌ Aucun pari dans l'historique. Simulez des paris d'abord!", None
+
+    report = f"""
+# 📊 Rapport de Performance
+
+## 💰 Bankroll
+| | Valeur |
+|---|---|
+| **Initial** | ${stats['initial_bankroll']:.2f} |
+| **Actuel** | ${stats['current_bankroll']:.2f} |
+| **Croissance** | {stats['bankroll_growth']:+.2f}% |
+
+## 📈 Statistiques
+| | Valeur |
+|---|---|
+| **Total de paris** | {stats['total_bets']} |
+| **Victoires** | {stats['wins']} ({stats['win_rate']:.1f}%) |
+| **Défaites** | {stats['losses']} |
+
+## 💵 Finances
+| | Valeur |
+|---|---|
+| **Total misé** | ${stats['total_staked']:.2f} |
+| **Profit total** | ${stats['total_profit']:+.2f} |
+| **ROI** | {stats['roi']:+.2f}% |
+| **Mise moyenne** | ${stats['avg_stake']:.2f} |
+| **Profit moyen/pari** | ${stats['avg_profit_per_bet']:+.2f} |
+    """
+
+    # Graphique de performance
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+
+    # Graphique 1 : Victoires vs Défaites
+    ax1.pie([stats['wins'], stats['losses']],
+            labels=[f"Victoires\n({stats['wins']})", f"Défaites\n({stats['losses']})"],
+            colors=['#4CAF50', '#FF5722'],
+            autopct='%1.1f%%',
+            startangle=90,
+            textprops={'fontsize': 12})
+    ax1.set_title('Taux de Victoire', fontsize=14, fontweight='bold')
+
+    # Graphique 2 : Évolution du bankroll
+    if betting_strategy.bet_history:
+        bankroll_history = [stats['initial_bankroll']] + [b['bankroll_after'] for b in betting_strategy.bet_history]
+        ax2.plot(bankroll_history, color='#2196F3', linewidth=2, marker='o', markersize=4)
+        ax2.axhline(y=stats['initial_bankroll'], color='gray', linewidth=1, linestyle='--', label='Bankroll initial')
+        ax2.fill_between(range(len(bankroll_history)), stats['initial_bankroll'], bankroll_history,
+                         alpha=0.2, color='#2196F3')
+        ax2.set_xlabel('Nombre de paris', fontsize=12)
+        ax2.set_ylabel('Bankroll ($)', fontsize=12, fontweight='bold')
+        ax2.set_title('Évolution du Bankroll', fontsize=14, fontweight='bold')
+        ax2.legend()
+        ax2.grid(alpha=0.3, linestyle='--')
+
+    plt.tight_layout()
+
+    return report, fig
+
+
 # ==================== INTERFACE GRADIO ====================
 
-# Créer l'interface Gradio
 with gr.Blocks(title="⚽🎾 Prédicteur Sports", css="") as app:
-    
+
     gr.Markdown("""
     # ⚽🎾 Prédicteur de Matchs avec réseau neuronal
     ## 🧠 Intelligence Artificielle avec PyTorch
-    
+
     Prédisez les résultats des matchs de **Serie A** et de **Tennis** basés sur les données historiques
     """)
-    
+
     with gr.Tabs():
+
         # ==================== SECTION FOOTBALL ====================
         with gr.Tab("⚽ FOOTBALL - Serie A"):
             with gr.Tabs():
-                # Onglet Prédiction Football
+
                 with gr.Tab("🎯 Prédiction"):
                     gr.Markdown("### Sélectionnez deux équipes et le lieu du match")
-                    
+
                     with gr.Row():
                         with gr.Column():
-                            team1_input = gr.Dropdown(
-                                choices=all_teams,
-                                label="🏠 Équipe à domicile",
-                                value=all_teams[0] if len(all_teams) > 0 else None
-                            )
-                        
+                            team1_input = gr.Dropdown(choices=all_teams, label="🏠 Équipe à domicile",
+                                                      value=all_teams[0] if all_teams else None)
                         with gr.Column():
-                            team2_input = gr.Dropdown(
-                                choices=all_teams,
-                                label="✈️ Équipe à l'extérieur",
-                                value=all_teams[1] if len(all_teams) > 1 else None
-                            )
-                    
-                    venue_input = gr.Radio(
-                        choices=["Home", "Away"],
-                        label="📍 Perspective de prédiction",
-                        value="Home",
-                        info="'Home' = probabilités pour l'équipe à domicile, 'Away' = probabilités pour l'équipe à l'extérieur"
-                    )
-                    
+                            team2_input = gr.Dropdown(choices=all_teams, label="✈️ Équipe à l'extérieur",
+                                                      value=all_teams[1] if len(all_teams) > 1 else None)
+
+                    venue_input = gr.Radio(choices=["Home", "Away"], label="📍 Perspective de prédiction",
+                                          value="Home",
+                                          info="'Home' = probabilités pour l'équipe à domicile, 'Away' = pour l'équipe à l'extérieur")
+
                     predict_button = gr.Button("🔮 Prédire le résultat", variant="primary", size="lg")
-                    
+
                     with gr.Row():
                         with gr.Column():
                             prediction_output = gr.Markdown()
                         with gr.Column():
                             prediction_plot = gr.Plot()
-                    
-                    predict_button.click(
-                        fn=predict_match,
-                        inputs=[team1_input, team2_input, venue_input],
-                        outputs=[prediction_output, prediction_plot]
-                    )
-                
-                # Onglet Statistiques Football
+
+                    predict_button.click(fn=predict_match,
+                                         inputs=[team1_input, team2_input, venue_input],
+                                         outputs=[prediction_output, prediction_plot])
+
                 with gr.Tab("📊 Statistiques"):
                     gr.Markdown("### Consultez les statistiques détaillées d'une équipe")
-                    
-                    team_stats_input = gr.Dropdown(
-                        choices=all_teams,
-                        label="Sélectionnez une équipe",
-                        value=all_teams[0] if len(all_teams) > 0 else None
-                    )
-                    
+
+                    team_stats_input = gr.Dropdown(choices=all_teams, label="Sélectionnez une équipe",
+                                                   value=all_teams[0] if all_teams else None)
                     stats_button = gr.Button("📈 Voir les statistiques", variant="primary", size="lg")
-                    
+
                     with gr.Row():
                         with gr.Column():
                             stats_output = gr.Markdown()
                         with gr.Column():
                             stats_plot = gr.Plot()
-                    
-                    stats_button.click(
-                        fn=get_team_stats,
-                        inputs=[team_stats_input],
-                        outputs=[stats_output, stats_plot]
-                    )
-                
-                # Onglet Comparaison Football
+
+                    stats_button.click(fn=get_team_stats, inputs=[team_stats_input],
+                                       outputs=[stats_output, stats_plot])
+
                 with gr.Tab("⚔️ Comparaison"):
                     gr.Markdown("### Comparez deux équipes côte à côte")
-                    
+
                     with gr.Row():
-                        compare_team1 = gr.Dropdown(
-                            choices=all_teams,
-                            label="Équipe 1",
-                            value=all_teams[0] if len(all_teams) > 0 else None
-                        )
-                        compare_team2 = gr.Dropdown(
-                            choices=all_teams,
-                            label="Équipe 2",
-                            value=all_teams[1] if len(all_teams) > 1 else None
-                        )
-                    
+                        compare_team1 = gr.Dropdown(choices=all_teams, label="Équipe 1",
+                                                    value=all_teams[0] if all_teams else None)
+                        compare_team2 = gr.Dropdown(choices=all_teams, label="Équipe 2",
+                                                    value=all_teams[1] if len(all_teams) > 1 else None)
+
                     compare_button = gr.Button("⚖️ Comparer", variant="primary", size="lg")
-                    
+
                     with gr.Row():
                         with gr.Column():
                             compare_output = gr.Markdown()
                         with gr.Column():
                             compare_plot = gr.Plot()
-                    
-                    compare_button.click(
-                        fn=compare_teams,
-                        inputs=[compare_team1, compare_team2],
-                        outputs=[compare_output, compare_plot]
-                    )
-        
+
+                    compare_button.click(fn=compare_teams,
+                                         inputs=[compare_team1, compare_team2],
+                                         outputs=[compare_output, compare_plot])
+
         # ==================== SECTION TENNIS ====================
         with gr.Tab("🎾 TENNIS"):
             with gr.Tabs():
-                # Onglet Prédiction Tennis
+
                 with gr.Tab("🎯 Prédiction"):
                     gr.Markdown("### Sélectionnez deux joueurs et la surface")
-                    
+
                     with gr.Row():
                         with gr.Column():
-                            tennis_player1 = gr.Dropdown(
-                                choices=all_tennis_players,
-                                label="🎾 Joueur 1",
-                                value=all_tennis_players[0] if len(all_tennis_players) > 0 else None
-                            )
-                        
+                            tennis_player1 = gr.Dropdown(choices=all_tennis_players, label="🎾 Joueur 1",
+                                                         value=all_tennis_players[0] if all_tennis_players else None)
                         with gr.Column():
-                            tennis_player2 = gr.Dropdown(
-                                choices=all_tennis_players,
-                                label="🎾 Joueur 2",
-                                value=all_tennis_players[1] if len(all_tennis_players) > 1 else None
-                            )
-                    
-                    tennis_surface = gr.Radio(
-                        choices=tennis_surfaces,
-                        label="🎾 Surface",
-                        value="Hard",
-                        info="Choisissez la surface du court"
-                    )
-                    
+                            tennis_player2 = gr.Dropdown(choices=all_tennis_players, label="🎾 Joueur 2",
+                                                         value=all_tennis_players[1] if len(all_tennis_players) > 1 else None)
+
+                    tennis_surface = gr.Radio(choices=tennis_surfaces, label="🎾 Surface", value="Hard",
+                                             info="Choisissez la surface du court")
+
                     tennis_predict_button = gr.Button("🔮 Prédire le résultat", variant="primary", size="lg")
-                    
+
                     with gr.Row():
                         with gr.Column():
                             tennis_prediction_output = gr.Markdown()
                         with gr.Column():
                             tennis_prediction_plot = gr.Plot()
-                    
-                    tennis_predict_button.click(
-                        fn=predict_tennis_match,
-                        inputs=[tennis_player1, tennis_player2, tennis_surface],
-                        outputs=[tennis_prediction_output, tennis_prediction_plot]
-                    )
-                
-                # Onglet Statistiques Tennis
+
+                    tennis_predict_button.click(fn=predict_tennis_match,
+                                                inputs=[tennis_player1, tennis_player2, tennis_surface],
+                                                outputs=[tennis_prediction_output, tennis_prediction_plot])
+
                 with gr.Tab("📊 Statistiques"):
                     gr.Markdown("### Consultez les statistiques détaillées d'un joueur")
-                    
-                    tennis_stats_input = gr.Dropdown(
-                        choices=all_tennis_players,
-                        label="Sélectionnez un joueur",
-                        value=all_tennis_players[0] if len(all_tennis_players) > 0 else None
-                    )
-                    
+
+                    tennis_stats_input = gr.Dropdown(choices=all_tennis_players, label="Sélectionnez un joueur",
+                                                     value=all_tennis_players[0] if all_tennis_players else None)
                     tennis_stats_button = gr.Button("📈 Voir les statistiques", variant="primary", size="lg")
-                    
+
                     with gr.Row():
                         with gr.Column():
                             tennis_stats_output = gr.Markdown()
                         with gr.Column():
                             tennis_stats_plot = gr.Plot()
-                    
-                    tennis_stats_button.click(
-                        fn=get_tennis_player_stats,
-                        inputs=[tennis_stats_input],
-                        outputs=[tennis_stats_output, tennis_stats_plot]
-                    )
-                
-                # Onglet Comparaison Tennis
+
+                    tennis_stats_button.click(fn=get_tennis_player_stats, inputs=[tennis_stats_input],
+                                              outputs=[tennis_stats_output, tennis_stats_plot])
+
                 with gr.Tab("⚔️ Comparaison"):
                     gr.Markdown("### Comparez deux joueurs côte à côte")
-                    
+
                     with gr.Row():
-                        tennis_compare_player1 = gr.Dropdown(
-                            choices=all_tennis_players,
-                            label="Joueur 1",
-                            value=all_tennis_players[0] if len(all_tennis_players) > 0 else None
-                        )
-                        tennis_compare_player2 = gr.Dropdown(
-                            choices=all_tennis_players,
-                            label="Joueur 2",
-                            value=all_tennis_players[1] if len(all_tennis_players) > 1 else None
-                        )
-                    
+                        tennis_compare_player1 = gr.Dropdown(choices=all_tennis_players, label="Joueur 1",
+                                                             value=all_tennis_players[0] if all_tennis_players else None)
+                        tennis_compare_player2 = gr.Dropdown(choices=all_tennis_players, label="Joueur 2",
+                                                             value=all_tennis_players[1] if len(all_tennis_players) > 1 else None)
+
                     tennis_compare_button = gr.Button("⚖️ Comparer", variant="primary", size="lg")
-                    
+
                     with gr.Row():
                         with gr.Column():
                             tennis_compare_output = gr.Markdown()
                         with gr.Column():
                             tennis_compare_plot = gr.Plot()
-                    
-                    tennis_compare_button.click(
-                        fn=compare_tennis_players,
-                        inputs=[tennis_compare_player1, tennis_compare_player2],
-                        outputs=[tennis_compare_output, tennis_compare_plot]
+
+                    tennis_compare_button.click(fn=compare_tennis_players,
+                                                inputs=[tennis_compare_player1, tennis_compare_player2],
+                                                outputs=[tennis_compare_output, tennis_compare_plot])
+
+        # ==================== SECTION PARIS ====================
+        with gr.Tab("💰 PARIS - Analyse"):
+            with gr.Tabs():
+
+                # Onglet Analyse d'un match
+                with gr.Tab("🎯 Analyser un Pari"):
+                    gr.Markdown("### Entrez les cotes du bookmaker pour obtenir une recommandation de pari")
+
+                    with gr.Row():
+                        with gr.Column():
+                            bet_team1 = gr.Dropdown(choices=all_teams, label="🏠 Équipe à domicile",
+                                                    value=all_teams[0] if all_teams else None)
+                        with gr.Column():
+                            bet_team2 = gr.Dropdown(choices=all_teams, label="✈️ Équipe à l'extérieur",
+                                                    value=all_teams[1] if len(all_teams) > 1 else None)
+
+                    bet_venue = gr.Radio(choices=["Home", "Away"], label="📍 Perspective",
+                                        value="Home")
+
+                    gr.Markdown("### 📋 Cotes du Bookmaker (format décimal)")
+                    with gr.Row():
+                        with gr.Column():
+                            odds_win = gr.Number(label=f"Cote Victoire équipe 1", value=2.10, minimum=1.01)
+                        with gr.Column():
+                            odds_draw = gr.Number(label="Cote Match Nul", value=3.40, minimum=1.01)
+                        with gr.Column():
+                            odds_loss = gr.Number(label=f"Cote Victoire équipe 2", value=3.50, minimum=1.01)
+
+                    gr.Markdown("### ⚙️ Paramètres de la Stratégie")
+                    with gr.Row():
+                        with gr.Column():
+                            bankroll_input = gr.Number(label="💰 Votre Bankroll ($)", value=1000, minimum=1)
+                        with gr.Column():
+                            min_confidence_input = gr.Slider(label="🧠 Confiance minimale (%)",
+                                                             minimum=50, maximum=90, value=65, step=5)
+                        with gr.Column():
+                            min_edge_input = gr.Slider(label="📈 Avantage minimal (%)",
+                                                       minimum=2, maximum=20, value=8, step=1)
+
+                    bet_button = gr.Button("🔮 Analyser le Pari", variant="primary", size="lg")
+
+                    with gr.Row():
+                        with gr.Column():
+                            bet_output = gr.Markdown()
+                        with gr.Column():
+                            bet_plot = gr.Plot()
+
+                    bet_button.click(
+                        fn=analyze_bet,
+                        inputs=[bet_team1, bet_team2, bet_venue, odds_win, odds_draw, odds_loss,
+                                bankroll_input, min_confidence_input, min_edge_input],
+                        outputs=[bet_output, bet_plot]
                     )
-    
+
+                # Onglet Performance
+                with gr.Tab("📊 Performance des Paris"):
+                    gr.Markdown("### Consultez vos statistiques de paris")
+
+                    perf_button = gr.Button("📊 Voir le Rapport de Performance", variant="primary", size="lg")
+
+                    with gr.Row():
+                        with gr.Column():
+                            perf_output = gr.Markdown()
+                        with gr.Column():
+                            perf_plot = gr.Plot()
+
+                    perf_button.click(fn=get_betting_performance,
+                                      inputs=[],
+                                      outputs=[perf_output, perf_plot])
+
     gr.Markdown("""
     ---
     <div style="text-align: center;">
