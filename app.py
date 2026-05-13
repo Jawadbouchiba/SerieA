@@ -2,7 +2,6 @@ import gradio as gr
 import pandas as pd
 from model import FootballPredictor
 from model_tennis import TennisPredictor
-from betting_strategy import BettingStrategy
 import os
 import matplotlib.pyplot as plt
 import numpy as np
@@ -30,10 +29,7 @@ tennis_predictor = TennisPredictor('datatenis20002025.csv')
 tennis_predictor.load_and_prepare_data()
 print(f"✅ Tennis prêt! {len(tennis_predictor.get_all_players())} joueurs chargés")
 
-# Initialiser la stratégie de paris
-print("\n💰 Initialisation du module de paris...")
-betting_strategy = BettingStrategy(predictor, initial_bankroll=1000)
-print("✅ Module de paris prêt!")
+
 
 # Récupérer toutes les équipes
 all_teams_raw = predictor.get_all_teams()
@@ -782,75 +778,7 @@ with gr.Blocks(title="⚽🎾 Prédicteur Sports", css="") as app:
                                                 inputs=[tennis_compare_player1, tennis_compare_player2],
                                                 outputs=[tennis_compare_output, tennis_compare_plot])
 
-        # ==================== SECTION PARIS ====================
-        with gr.Tab("💰 PARIS - Analyse"):
-            with gr.Tabs():
-
-                # Onglet Analyse d'un match
-                with gr.Tab("🎯 Analyser un Pari"):
-                    gr.Markdown("### Entrez les cotes du bookmaker pour obtenir une recommandation de pari")
-
-                    with gr.Row():
-                        with gr.Column():
-                            bet_team1 = gr.Dropdown(choices=all_teams, label="🏠 Équipe à domicile",
-                                                    value=all_teams[0] if all_teams else None)
-                        with gr.Column():
-                            bet_team2 = gr.Dropdown(choices=all_teams, label="✈️ Équipe à l'extérieur",
-                                                    value=all_teams[1] if len(all_teams) > 1 else None)
-
-                    bet_venue = gr.Radio(choices=["Home", "Away"], label="📍 Perspective",
-                                        value="Home")
-
-                    gr.Markdown("### 📋 Cotes du Bookmaker (format décimal)")
-                    with gr.Row():
-                        with gr.Column():
-                            odds_win = gr.Number(label=f"Cote Victoire équipe 1", value=2.10, minimum=1.01)
-                        with gr.Column():
-                            odds_draw = gr.Number(label="Cote Match Nul", value=3.40, minimum=1.01)
-                        with gr.Column():
-                            odds_loss = gr.Number(label=f"Cote Victoire équipe 2", value=3.50, minimum=1.01)
-
-                    gr.Markdown("### ⚙️ Paramètres de la Stratégie")
-                    with gr.Row():
-                        with gr.Column():
-                            bankroll_input = gr.Number(label="💰 Votre Bankroll ($)", value=1000, minimum=1)
-                        with gr.Column():
-                            min_confidence_input = gr.Slider(label="🧠 Confiance minimale (%)",
-                                                             minimum=50, maximum=90, value=65, step=5)
-                        with gr.Column():
-                            min_edge_input = gr.Slider(label="📈 Avantage minimal (%)",
-                                                       minimum=2, maximum=20, value=8, step=1)
-
-                    bet_button = gr.Button("🔮 Analyser le Pari", variant="primary", size="lg")
-
-                    with gr.Row():
-                        with gr.Column():
-                            bet_output = gr.Markdown()
-                        with gr.Column():
-                            bet_plot = gr.Plot()
-
-                    bet_button.click(
-                        fn=analyze_bet,
-                        inputs=[bet_team1, bet_team2, bet_venue, odds_win, odds_draw, odds_loss,
-                                bankroll_input, min_confidence_input, min_edge_input],
-                        outputs=[bet_output, bet_plot]
-                    )
-
-                # Onglet Performance
-                with gr.Tab("📊 Performance des Paris"):
-                    gr.Markdown("### Consultez vos statistiques de paris")
-
-                    perf_button = gr.Button("📊 Voir le Rapport de Performance", variant="primary", size="lg")
-
-                    with gr.Row():
-                        with gr.Column():
-                            perf_output = gr.Markdown()
-                        with gr.Column():
-                            perf_plot = gr.Plot()
-
-                    perf_button.click(fn=get_betting_performance,
-                                      inputs=[],
-                                      outputs=[perf_output, perf_plot])
+      
 
     gr.Markdown("""
     ---
