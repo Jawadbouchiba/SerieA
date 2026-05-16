@@ -6,12 +6,41 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
+# ==================== INFOS DATASETS (PLAGE D'ANNÉES) ====================
+
+def _dataset_year_range(csv_path: str, date_col_candidates=("Date", "date")):
+    """Retourne (min_year, max_year) détectés via une colonne date, sinon (None, None)."""
+    try:
+        df_head = pd.read_csv(csv_path, usecols=lambda c: c in set(date_col_candidates), low_memory=False)
+        date_col = None
+        for c in date_col_candidates:
+            if c in df_head.columns:
+                date_col = c
+                break
+        if date_col is None:
+            return None, None
+
+        dates = pd.to_datetime(df_head[date_col], errors="coerce", dayfirst=True)
+        dates = dates.dropna()
+        if dates.empty:
+            return None, None
+        return int(dates.dt.year.min()), int(dates.dt.year.max())
+    except Exception:
+        return None, None
+
+
+FOOTBALL_DATASET_PATH = "data20202025.csv"
+TENNIS_DATASET_PATH = "datatenis20002025.csv"
+
+football_year_min, football_year_max = _dataset_year_range(FOOTBALL_DATASET_PATH)
+tennis_year_min, tennis_year_max = _dataset_year_range(TENNIS_DATASET_PATH)
+
 print("🚀 Démarrage de l'application Football & Tennis...")
 print("=" * 60)
 
 # Initialiser le prédicteur football
 print("\n⚽ Initialisation du prédicteur football...")
-predictor = FootballPredictor('data20202025.csv')
+predictor = FootballPredictor(FOOTBALL_DATASET_PATH)
 
 # Charger le modèle s'il existe, sinon l'entraîner
 if os.path.exists('best_model.pth'):
@@ -25,10 +54,9 @@ else:
 # Initialiser le prédicteur tennis
 print("\n🎾 Initialisation du prédicteur tennis...")
 print("⏳ Chargement des données tennis (cela peut prendre 1-2 minutes)...")
-tennis_predictor = TennisPredictor('datatenis20002025.csv')
+tennis_predictor = TennisPredictor(TENNIS_DATASET_PATH)
 tennis_predictor.load_and_prepare_data()
 print(f"✅ Tennis prêt! {len(tennis_predictor.get_all_players())} joueurs chargés")
-
 
 
 # Récupérer toutes les équipes
@@ -645,6 +673,15 @@ with gr.Blocks(title="⚽🎾 Prédicteur Sports", css="") as app:
 
         # ==================== SECTION FOOTBALL ====================
         with gr.Tab("⚽ FOOTBALL - Serie A"):
+            # --- Preuve historique des données ---
+            if football_year_min is not None and football_year_max is not None:
+                gr.Markdown(
+                    f"**📚 Dataset Serie A chargé : {football_year_min} → {football_year_max}**  \n"
+                    f"Fichier: `{FOOTBALL_DATASET_PATH}`"
+                )
+            else:
+                gr.Markdown(f"**📚 Dataset Serie A chargé** — Fichier: `{FOOTBALL_DATASET_PATH}`")
+
             with gr.Tabs():
 
                 with gr.Tab("🎯 Prédiction"):
@@ -713,6 +750,15 @@ with gr.Blocks(title="⚽🎾 Prédicteur Sports", css="") as app:
 
         # ==================== SECTION TENNIS ====================
         with gr.Tab("🎾 TENNIS"):
+            # --- Preuve historique des données ---
+            if tennis_year_min is not None and tennis_year_max is not None:
+                gr.Markdown(
+                    f"**📚 Dataset Tennis chargé : {tennis_year_min} → {tennis_year_max}**  \n"
+                    f"Fichier: `{TENNIS_DATASET_PATH}`"
+                )
+            else:
+                gr.Markdown(f"**📚 Dataset Tennis chargé** — Fichier: `{TENNIS_DATASET_PATH}`")
+
             with gr.Tabs():
 
                 with gr.Tab("🎯 Prédiction"):
